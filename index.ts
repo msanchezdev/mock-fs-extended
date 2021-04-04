@@ -5,7 +5,7 @@ import mock from 'mock-fs';
 
 let basedir = '';
 
-export const generateMockLoadFor = async (path: string) => {
+const generateMockLoadFor = async (path: string) => {
   const fsystem: FileSystem.DirectoryItem = {};
   let wildcardCheck = '';
   // allow wildcards
@@ -20,7 +20,11 @@ export const generateMockLoadFor = async (path: string) => {
     }
 
     const filepath = resolve(path, file);
-    fsystem[filepath] = mock.load(filepath);
+    try {
+      fsystem[filepath] = mock.load(filepath);
+    } catch {
+      // ignore fs errors (symlinks can fail if the linked entity doesnt exist)
+    }
   }
 
   return fsystem;
@@ -29,10 +33,12 @@ export const generateMockLoadFor = async (path: string) => {
 /**
  * Mockfs file system but keeps project folder and jest temporal folder
  */
-const mockfs = async (config?: FileSystem.DirectoryItem | undefined) => {
+export const mockfs = async (config?: FileSystem.DirectoryItem | undefined) => {
   mock({
     ...(basedir ? await generateMockLoadFor(basedir) : {}),
     ...(await generateMockLoadFor('/tmp/jest*')),
+    ...(await generateMockLoadFor('/tmp/ts-node*')),
+    ...(await generateMockLoadFor('/tmp/node*')),
     ...(<object>config),
   });
 
@@ -45,5 +51,3 @@ const mockfs = async (config?: FileSystem.DirectoryItem | undefined) => {
 export const setBasedir = (path = '') => {
   basedir = path ? resolve(path) : '';
 };
-
-export default mockfs;
